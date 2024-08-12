@@ -24,5 +24,13 @@ weight and bias
 wandb.ai: 1c65a95d06626786e604422c8a5d26ad37b3c431
 1c65a95d06626786e604422c8a5d26ad37b3c431
 
+OPENAI Key: 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
 
 ps -ef|grep LLMOps(가상환경 이름)
+
+PS C:\Windows\system32> Get-ExecutionPolicy
+Restricted
+PS C:\Windows\system32> Set-ExecutionPolicy RemoteSigned
+
+pip install -r requirements.txt
+pip install numpy==1.26.4
