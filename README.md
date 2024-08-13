@@ -34,3 +34,61 @@ PS C:\Windows\system32> Set-ExecutionPolicy RemoteSigned
 
 pip install -r requirements.txt
 pip install numpy==1.26.4
+
+=================================================
+curl http://localhost:11434/v1/chat/completions \
+-H "Content-Type: application/json" \
+-d '{
+"model": "llama3.1",
+"messages": [
+{
+"role": "system",
+"content": "You are a helpful assistant."
+},
+{
+"role": "user",
+"content": "머신러닝에 대해서 설명해줘."
+}
+]
+}'
+
+
+
+
+
+from openai import OpenAI
+
+client = OpenAI(
+base_url = 'http://localhost:11434/v1',
+api_key='ollama', # required, but unused
+)
+
+response = client.chat.completions.create(
+model="llama3.1",
+messages=[
+{"role": "system", "content": "You are a helpful assistant."},
+{"role": "user", "content": "Who won the world series in 2020?"},
+{"role": "assistant", "content": "The LA Dodgers won in 2020."},
+{"role": "user", "content": "Where was it played?"}
+]
+)
+print(response.choices[0].message.content)
+==========================================================================
+
+from openai import OpenAI
+
+client = OpenAI(
+base_url = 'https://1d44-14-35-173-251.ngrok-free.app/v1',
+api_key='ollama', # required, but unused
+)
+
+response = client.chat.completions.create(
+model="for_vllm",
+messages=[
+{"role": "system", "content": "You are a helpful assistant."},
+{"role": "user", "content": "Who won the world series in 2020?"},
+{"role": "assistant", "content": "The LA Dodgers won in 2020."},
+{"role": "user", "content": "오늘 날씨 어때?"}
+]
+)
+print(response.choices[0].message.content)
