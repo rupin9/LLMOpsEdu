@@ -1,0 +1,101 @@
+from operator import itemgetter
+
+from langchain_community.chat_models import ChatOpenAI
+from langchain_community.embeddings import OllamaEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.document_loaders import PyPDFLoader
+
+doc_path = "키오스크(무인정보단말기) 이용실태 조사.pdf"
+
+
+embeddings = OllamaEmbeddings(model="llama3.1",base_url="http://127.0.0.1:11434")
+
+import os
+db_path = "mydb"
+if os.path.exists(db_path):
+    if "vectorstore" not in globals():
+        vectorstore = FAISS.load_local(db_path, embeddings,
+                            allow_dangerous_deserialization=True)
+else:
+    loader = PyPDFLoader(doc_path)
+    docs = loader.load()
+    vectorstore = FAISS.from_documents(
+        docs,
+        embedding=embeddings,
+    )
+    vectorstore.save_local(db_path)
+
+print(vectorstore)
+print("문제없음.")
+import streamlit as st
+
+# OpenAI API 키 설정
+api_key = 'none'
+# Streamlit UI 구성
+st.title("Real-time Text Generation with RAG")
+
+prompt = st.text_input("Enter your prompt:", "")
+
+
+# role에는 "AI 어시스턴트"가, question에는 "당신을 소개해주세요."가 들어갈 수 있습니다.
+messages_with_variables = [
+    ("system", "당신은 {role} 입니다."),
+    ("human", "{question}. 한글로 답하세요."),
+]
+
+prompt = ChatPromptTemplate.from_messages(messages_with_variables)
+
+llm = ChatOpenAI(
+    model="for_vllm",
+    openai_api_key="EMPTY",
+    openai_api_base="http://127.0.0.1:8000/v1",
+    max_tokens=500,
+    temperature=0,
+)
+parser = StrOutputParser()
+
+# Retrieve한 문서 중 첫번째 문서를 가져오는 함수 정의
+def get_first_doc(docs):
+    return docs[0].page_content
+
+# 시스템과 사용자 메시지를 포함한 프롬프트 템플릿 생성
+messages_with_contexts = [
+    ("system", "당신은 {role} 입니다. 오직 {context}를 레퍼런스로 답변해주세요."),
+    ("human", "{question}. 한글로 답하세요."),
+]
+
+prompt_with_context = ChatPromptTemplate.from_messages(messages_with_contexts)
+db_retriever = vectorstore.as_retriever()
+# pipe (|) 연산자를 통해 여러 객체를 연결해서 하나의 체인으로 만들 수 있습니다.
+# 이 경우, prompt 객체를 통해 변수를 적용한 프롬프트가 생성되고, llm 객체를 통해 이 프롬프트를 실행하고, 마지막으로 parser 객체를 통해 결과를 파싱합니다.
+qa_chain = (
+    {"context": db_retriever | get_first_doc, "role": itemgetter("role"), "question": itemgetter("question")}
+    | prompt_with_context
+    | llm
+    | StrOutputParser()
+)
+
+if st.button("Generate Text"):
+    if prompt:
+        # 텍스트 생성 중 표시
+        st.write("Generating text...")
+        
+        # OpenAI API 호출
+        response = qa_chain.stream(
+            {"role": "통계 전문가", 
+             "question": prompt}
+             )
+        print(response)
+        
+        generated_text = ""
+        # 실시간으로 텍스트 표시
+        # for chunk in response:
+        #     chunk_text = chunk.choices[0].delta.content
+        #     generated_text += chunk_text
+        #     st.text_area("Generated Text:", value=generated_text, height=300)
+        st.write_stream(response)
+    else:
+        st.warning("Please enter a prompt to generate text.")
