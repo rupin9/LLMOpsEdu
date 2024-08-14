@@ -1,0 +1,51 @@
+class MyChatMemory:
+    def __init__(self, past=None):
+        self.generator = None
+        if past is None:
+            self.session=[]
+        self.tmp = ""
+    
+    def add(self, generator):
+        self.generator = generator
+
+    def __iter__(self):
+        return next(self)
+
+    def __next__(self):
+        for i in self.generator:
+            self.tmp += i.content
+            yield i
+        self.session.append(self.tmp)
+        self.tmp = ""
+        return None
+
+
+output = llm.stream("점심 메뉴 추천해줘.")
+memory = MyChatMemory()
+memory.add(output)
+for i in memory:
+    print(i.content, end="")
+print(memory.session)
+​
+## /////////////////////////////////////////////////////////////
+
+class MyChatMemory:
+    def __init__(self, past=None):
+        self.generator = None
+        if past is None:
+            self.session=[]
+        self.tmp = ""
+    
+    def add(self, generator):
+        self.generator = generator
+
+    def __iter__(self):
+        return next(self)
+
+    def __next__(self):
+        for i in self.generator:
+            self.tmp += i
+            yield i
+        self.session.append(self.tmp)
+        self.tmp = ""
+        return None
